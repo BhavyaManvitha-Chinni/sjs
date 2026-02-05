@@ -1,0 +1,13 @@
+# Ignore videos folder
+videos/
+
+# Ignore YOLO weights
+*.pt
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore system files
+.DS_Store
+Thumbs.db
