@@ -1,4 +1,8 @@
 class JunctionLogic:
+    
+    #FINAL Algorithm 2 Junction Fusion
+    
+
     def __init__(self, blind_roads):
         self.blind_roads = blind_roads
         self.current_signal = "GREEN"
@@ -19,6 +23,7 @@ class JunctionLogic:
 
             if status["alert"]:
 
+                # Risk Score 
                 risk = (
                     status["vehicle_count"]
                     + (200 - status["min_distance"]) / 20

@@ -8,9 +8,9 @@ class LedBoard:
         self.width = 900
         self.height = 650
 
-        # ============================
+        
         # JUNCTION CONFIG RULES
-        # ============================
+        
         self.junction_type = junction_type
 
         if junction_type == "FOUR_WAY":
@@ -35,9 +35,9 @@ class LedBoard:
                 "MAIN ROAD": ["LEFT", "RIGHT"]
             }
 
-        # ============================
+        
         # PANEL POSITIONS (2×2 GRID)
-        # ============================
+        
         self.positions = {
             "NORTH TO SOUTH": (50, 80),
             "SOUTH TO NORTH": (480, 80),
@@ -50,7 +50,7 @@ class LedBoard:
             "MAIN ROAD": (50, 360)
         }
 
-        # Threat direction display (text arrows)
+        # Threat direction display
         self.arrow_text = {
             "EAST": "RIGHT",
             "WEST": "LEFT",
@@ -60,6 +60,20 @@ class LedBoard:
             "RIGHT": "RIGHT"
         }
 
+    
+    def update(self, road_status_dict):
+        
+        road_statuses = []
+
+        for road, alert in road_status_dict.items():
+            road_statuses.append({
+                "road": road,
+                "alert": alert
+            })
+
+        self.render(road_statuses)
+
+    
     def render(self, road_statuses):
 
         # Convert list → dict
@@ -68,9 +82,7 @@ class LedBoard:
         # Background window
         board = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
-        # ============================
-        # TITLE
-        # ============================
+        
         cv2.putText(
             board,
             f"SMART JUNCTION LED WARNING SYSTEM ({self.junction_type})",
@@ -81,9 +93,7 @@ class LedBoard:
             2
         )
 
-        # ============================
-        # DRAW EACH LED PANEL
-        # ============================
+
         for movement, threats in self.rules.items():
 
             px, py = self.positions[movement]
@@ -106,9 +116,6 @@ class LedBoard:
                 2
             )
 
-            # ============================
-            # LIGHT + STATUS
-            # ============================
             if active_threats:
                 light_color = (0, 255, 255)  # Yellow
                 status_text = "WARNING"
@@ -130,9 +137,6 @@ class LedBoard:
                 3
             )
 
-            # ============================
-            # THREAT DISPLAY
-            # ============================
             if active_threats:
                 arrow_text = " ".join([self.arrow_text[t] for t in active_threats])
             else:

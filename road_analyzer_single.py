@@ -3,39 +3,26 @@ import numpy as np
 import time
 from ultralytics import YOLO
 
-# =========================
-# LOAD YOLO MODEL
-# =========================
+
 model = YOLO("yolov8n.pt", verbose=False)
 
-# =========================
-# VIDEO SOURCE
-# =========================
+
 video_path = "videos/highway.mp4"  # or 0 for webcam
 cap = cv2.VideoCapture(video_path)
 
-# =========================
-# VEHICLE CLASSES
-# =========================
 VEHICLE_CLASSES = ["car", "bus", "truck", "motorcycle"]
 
-# =========================
-# TRACK MEMORY
-# =========================
+
 bbox_history = {}          # track_id -> last bbox height
 approach_counter = {}     # track_id -> consecutive approach frames
 
-# =========================
-# ALERT CONTROL
-# =========================
+
 APPROACH_FRAMES_REQUIRED = 1     # confirmation frames
 ALERT_HOLD_TIME = 2.0            # seconds
 last_alert_time = 0
 alert_active = False
 
-# =========================
-# MAIN LOOP
-# =========================
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -78,9 +65,7 @@ while cap.isOpened():
 
             prev_height = bbox_history[track_id]
 
-            # -------------------------
-            # APPROACH LOGIC (SMOOTHED)
-            # -------------------------
+            
             if bbox_height > prev_height + 3:
                 approach_counter[track_id] += 1
             else:
@@ -106,18 +91,14 @@ while cap.isOpened():
                 2
             )
 
-    # =========================
-    # ALERT STATE LOGIC
-    # =========================
+
     if approach_detected_this_frame:
         alert_active = True
         last_alert_time = current_time
     elif current_time - last_alert_time > ALERT_HOLD_TIME:
         alert_active = False
 
-    # =========================
-    # LED BOARD WINDOW
-    # =========================
+
     led_board = np.ones((300, 300, 3), dtype="uint8") * 255
 
     if alert_active:
@@ -137,9 +118,7 @@ while cap.isOpened():
         2
     )
 
-    # =========================
-    # DISPLAY
-    # =========================
+
     cv2.imshow("Vehicle Detection & Analysis", frame)
     cv2.imshow("Service Road LED Alert Board", led_board)
 

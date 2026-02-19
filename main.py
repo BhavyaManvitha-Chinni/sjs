@@ -1,62 +1,98 @@
 import cv2
-import time
+from ultralytics import YOLO
 
 from core.road_analyzer import RoadAnalyzer
 from ui.led_board import LedBoard
+from core.junction_controller import JunctionLogic
+from core.logger import CSVLogger
 
 
 def main():
-    print("\n[INFO] Multi-Road Junction Safety System Started")
-    print("[INFO] Press 'q' to quit\n")
 
-    # ============================
-    # VIDEO INPUTS (4 Directions)
-    # ============================
-    roads = [
-        RoadAnalyzer("EAST", "videos/east.mp4"),
-        RoadAnalyzer("WEST", "videos/west.mp4"),
-        RoadAnalyzer("NORTH", "videos/north.mp4"),
-        RoadAnalyzer("SOUTH", "videos/south.mp4")
-    ]
+    print("\n[INFO] Smart Junction Safety Alert System Started...\n")
 
-    # ============================
-    # SELECT JUNCTION TYPE
-    # Options: FOUR_WAY, T_JUNCTION, Y_JUNCTION
-    # ============================
-    led_board = LedBoard(junction_type="FOUR_WAY")
+    # Load YOLO once
+    shared_model = YOLO("yolov8n.pt", verbose=False)
 
-    # ============================
-    # MAIN LOOP
-    # ============================
+    # Junction type selection
+    JUNCTION_TYPE = "Y_JUNCTION"   # FOUR_WAY / T_JUNCTION / Y_JUNCTION
+    print("[INFO] Junction Type:", JUNCTION_TYPE)
+
+    # Select road streams based on junction
+    if JUNCTION_TYPE == "FOUR_WAY":
+        analyzers = [
+            RoadAnalyzer("NORTH", "videos/north.mp4", shared_model),
+            RoadAnalyzer("SOUTH", "videos/south.mp4", shared_model),
+            RoadAnalyzer("EAST", "videos/east.mp4", shared_model),
+            RoadAnalyzer("WEST", "videos/west.mp4", shared_model),
+        ]
+        blind_roads = ["NORTH", "SOUTH", "EAST", "WEST"]
+
+    elif JUNCTION_TYPE == "T_JUNCTION":
+        analyzers = [
+            RoadAnalyzer("NORTH", "videos/north.mp4", shared_model),
+            RoadAnalyzer("EAST", "videos/east.mp4", shared_model),
+            RoadAnalyzer("WEST", "videos/west.mp4", shared_model),
+        ]
+        blind_roads = ["NORTH", "EAST", "WEST"]
+
+    elif JUNCTION_TYPE == "Y_JUNCTION":
+        analyzers = [
+            RoadAnalyzer("LEFT", "videos/east.mp4", shared_model),
+            RoadAnalyzer("RIGHT", "videos/west.mp4", shared_model),
+            RoadAnalyzer("MAIN", "videos/highway.mp4", shared_model),
+        ]
+        blind_roads = ["LEFT", "RIGHT", "MAIN"]
+
+    # LED dashboard
+    led_board = LedBoard(JUNCTION_TYPE)
+
+    # Junction fusion logic
+    junction_logic = JunctionLogic(blind_roads)
+
+    # CSV logging
+    logger = CSVLogger()
+    print("[INFO] Logging Enabled → logs/run_log.csv")
+    print("[INFO] Press 'q' or 'Esc' to quit.\n")
+
     while True:
 
-        road_statuses = []
+        road_status_dict = {}
+        full_statuses = []
 
-        # ---- Process each road ----
-        for road in roads:
+        for analyzer in analyzers:
 
-            frame = road.process_frame()
-            if frame is None:
-                continue
+            frame = analyzer.process_frame()
+            status = analyzer.get_status()
 
-            # Show road camera window
-            cv2.imshow(f"Road View: {road.road_name}", frame)
+            full_statuses.append(status)
+            road_status_dict[status["road"]] = status["alert"]
 
-            # Collect road status
-            road_statuses.append(road.get_status())
+            # Log results
+            logger.log(status)
 
-        # ---- Render LED Dashboard ----
-        led_board.render(road_statuses)
+            # Show camera feed
+            if frame is not None:
+                cv2.imshow(f"{status['road']} Camera", frame)
 
-        # ---- Exit condition ----
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        # Update LED board
+        led_board.update(road_status_dict)
+
+        # Update junction fusion
+        junction_logic.update(full_statuses)
+
+        # Quit control (Reliable)
+        key = cv2.waitKey(10) & 0xFF
+        if key == ord("q") or key == 27:
+            print("\n[INFO] Exit key pressed. Closing system...")
             break
 
-        time.sleep(0.01)
+    # Release video resources
+    for analyzer in analyzers:
+        analyzer.cap.release()
 
-    # Cleanup
     cv2.destroyAllWindows()
-    print("\n[INFO] System Stopped Successfully\n")
+    print("[INFO] System Stopped Successfully.\n")
 
 
 if __name__ == "__main__":

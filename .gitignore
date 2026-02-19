@@ -11,3 +11,6 @@ __pycache__/
 # Ignore system files
 .DS_Store
 Thumbs.db
+
+yolov8n.pt
+logs/*.csv
